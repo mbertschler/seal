@@ -2,9 +2,19 @@
 
 Check the integrity of your file archives and backups.
 
-# Commands
+## Running it locally
 
-## `seal`
+```bash
+# creates test directory structure, see SetupTestDir
+go test ./...
+
+# run the seal command to create _seal.json files
+go run ./cmd/seal ./testdir
+```
+
+## Commands
+
+### `seal`
 
 - Adds new files and directories to seals.
 - Verifies all existing files against the seal.
