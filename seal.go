@@ -2,120 +2,111 @@ package seal
 
 import (
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 )
 
-const SealFile = "_seal.json"
+// SealPath calculates seals for the given path and all subdirectories
+// and writes them into a seal JSON file per directory.
+func SealPath(path string) error {
+	log.Println("sealing", path)
 
-// RootCmd is the what that should be executed by the seal command.
-var RootCmd = &cobra.Command{
-	Use:   "seal",
-	Short: "Seal checks the integrity of your file archives",
-	RunE:  runRootCmd,
-}
-
-func runRootCmd(cmd *cobra.Command, args []string) error {
-	fmt.Println("Hello, I'm seal! 🦭")
-	if len(args) == 0 {
-		return errors.New("need at least one path argument to seal")
-	}
-	for _, arg := range args {
-		err := sealPath(arg)
-		if err != nil {
-			return errors.Wrap(err, "sealDir")
-		}
-	}
-	return nil
-}
-
-func sealPath(path string) error {
-	fmt.Println("sealing", path)
-	dirs, err := directoriesToSeal(path)
+	dirs, err := indexDirectories(path)
 	if err != nil {
 		return errors.Wrap(err, "directoriesToSeal")
 	}
+
 	for _, dir := range dirs {
-		fmt.Println("sealing dir", dir.path)
-		err = sealDir(dir.path)
+		log.Println("sealing dir", dir.path)
+		seal, err := sealDir(dir.path)
 		if err != nil {
 			return errors.Wrap(err, "sealDir")
+		}
+
+		err = seal.WriteFile(dir.path)
+		if err != nil {
+			return errors.Wrap(err, "seal.WriteDir")
 		}
 	}
 	return nil
 }
 
-func sealDir(path string) error {
+// sealDir turns all files and subdirectories into a DirSeal.
+func sealDir(path string) (DirSeal, error) {
+	var seal DirSeal
+
+	// basic info from the directory itself
 	info, err := os.Lstat(path)
 	if err != nil {
-		return errors.Wrap(err, "Lstat")
+		return seal, errors.Wrap(err, "Lstat")
 	}
+	seal.Name = info.Name()
+	seal.Modified = info.ModTime()
+	seal.Scanned = time.Now()
+
+	// add information from all files and subdirectories to seal
 	files, err := os.ReadDir(path)
 	if err != nil {
-		return errors.Wrap(err, "ReadDir")
-	}
-
-	seal := DirSeal{
-		Name:     info.Name(),
-		Modified: info.ModTime(),
-		Scanned:  time.Now(),
+		return seal, errors.Wrap(err, "ReadDir")
 	}
 
 	for _, file := range files {
-		if file.Name() == SealFile {
-			continue
-		}
-		fullPath := filepath.Join(path, file.Name())
-		var f FileSeal
-		if file.IsDir() {
-			f, err = sealSubDir(fullPath)
-			if err != nil {
-				return errors.Wrap(err, "sealSubDir")
-			}
-		} else {
-			f, err = sealFile(fullPath)
-			if err != nil {
-				return errors.Wrap(err, "sealFile")
-			}
-		}
-
-		seal.Files = append(seal.Files, f)
-		seal.TotalSize += f.Size
-	}
-
-	seal.Sort()
-	dirHash := sha256.New()
-	for _, file := range seal.Files {
-		size := make([]byte, 8)
-		binary.BigEndian.PutUint64(size, uint64(file.Size))
-		dirHash.Write(size)
-
-		_, err = dirHash.Write(file.SHA256)
+		err = addFileToSeal(&seal, path, file)
 		if err != nil {
-			return errors.Wrap(err, "WriteHash")
+			return seal, errors.Wrap(err, "addFileToSeal")
 		}
 	}
-	seal.SHA256 = dirHash.Sum(nil)
 
-	err = seal.WriteFile(path)
-	return errors.Wrap(err, "WriteSeal")
+	err = seal.hash()
+	if err != nil {
+		return seal, errors.Wrap(err, "hash")
+	}
+
+	return seal, errors.Wrap(err, "WriteSeal")
 }
 
+// addFileToSeal appends a FileSeal to the DirSeal.
+func addFileToSeal(seal *DirSeal, path string, file fs.DirEntry) error {
+	if file.Name() == SealFile {
+		return nil
+	}
+	fullPath := filepath.Join(path, file.Name())
+
+	var f FileSeal
+	var err error
+	if file.IsDir() {
+		f, err = sealSubDir(fullPath)
+		if err != nil {
+			return errors.Wrap(err, "sealSubDir")
+		}
+	} else {
+		f, err = sealFile(fullPath)
+		if err != nil {
+			return errors.Wrap(err, "sealFile")
+		}
+	}
+
+	seal.Files = append(seal.Files, f)
+	seal.TotalSize += f.Size
+	return nil
+}
+
+// sealFile turns a normal file into a FileSeal.
 func sealFile(path string) (FileSeal, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return FileSeal{}, errors.Wrap(err, "Lstat")
+	}
+
+	if info.IsDir() {
+		return FileSeal{}, errors.New("sealFile can't be used with directories")
 	}
 
 	seal := FileSeal{
@@ -126,27 +117,28 @@ func sealFile(path string) (FileSeal, error) {
 		Scanned:  time.Now(),
 	}
 
-	if seal.IsDir {
-		fmt.Println("sealFile for directories not implemented", path)
-		return seal, nil
-	}
+	seal.SHA256, err = hashFile(path)
+	return seal, errors.Wrap(err, "hashFile")
+}
 
+// hashFile hashes a normal file with SHA256.
+func hashFile(path string) ([]byte, error) {
 	fileHash := sha256.New()
 	f, err := os.Open(path)
 	if err != nil {
-		return seal, errors.Wrap(err, "Open")
+		return nil, errors.Wrap(err, "Open")
 	}
 	defer f.Close()
 
 	_, err = io.Copy(fileHash, f)
 	if err != nil {
-		return seal, errors.Wrap(err, "Copy")
+		return nil, errors.Wrap(err, "Copy")
 	}
-	seal.SHA256 = fileHash.Sum(nil)
 
-	return seal, nil
+	return fileHash.Sum(nil), nil
 }
 
+// sealSubDir turns the seal file of a subdirectory into a FileSeal.
 func sealSubDir(path string) (FileSeal, error) {
 	var seal FileSeal
 	f, err := os.Open(filepath.Join(path, SealFile))
@@ -171,33 +163,4 @@ func sealSubDir(path string) (FileSeal, error) {
 	}
 
 	return seal, nil
-}
-
-func directoriesToSeal(path string) ([]dir, error) {
-	out := []dir{}
-
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			path = filepath.Clean(path)
-			parts := strings.Split(path, "/")
-			out = append(out, dir{path: path, depth: len(parts)})
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "WalkDir")
-	}
-
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].depth > out[j].depth
-	})
-	return out, nil
-}
-
-type dir struct {
-	path  string
-	depth int
 }
