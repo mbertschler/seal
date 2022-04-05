@@ -1,7 +1,9 @@
 package seal
 
 import (
+	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -16,10 +18,17 @@ type dir struct {
 
 // indexDirectories returns all subdirectories with info about their depth.
 // The deepest nested directories are sorted first.
-func indexDirectories(path string) ([]dir, error) {
-	out := []dir{}
+func indexDirectories(dirPath string) ([]dir, error) {
+	info, err := os.Lstat(dirPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "Lstat")
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("%q is not a directory", dirPath)
+	}
 
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+	out := []dir{}
+	err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	err := seal.RootCmd.Execute()
+	err := seal.RootCmd().Execute()
 	if err != nil {
 		os.Exit(1)
 	}

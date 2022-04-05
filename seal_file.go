@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// SealFile is the filepath that is used in every sealed directory.
 const SealFile = "_seal.json"
 
 // DirSeal represents a complete seal of the directory
@@ -24,9 +25,10 @@ type DirSeal struct {
 	Name      string
 	TotalSize int64
 	Modified  time.Time
-	Scanned   time.Time
+	Sealed    time.Time
+	Verified  time.Time
 	SHA256    []byte
-	Files     []FileSeal
+	Files     []*FileSeal
 }
 
 // FileSeal represents one file inside a directory.
@@ -39,7 +41,8 @@ type FileSeal struct {
 	IsDir    bool `json:",omitempty"`
 	Size     int64
 	Modified time.Time
-	Scanned  time.Time
+	Sealed   time.Time
+	Verified time.Time
 	SHA256   []byte
 }
 
