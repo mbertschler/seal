@@ -44,8 +44,6 @@ func verifyDir(dirPath string, checkHash bool) error {
 	}
 
 	diff := DiffSeals(loadedSeal, currentSeal, checkHash)
-	if !diff.Identical {
-		log.Println("seals differ for", dirPath)
-	}
+	diff.PrintDifferences()
 	return nil
 }
