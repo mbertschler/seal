@@ -2,6 +2,7 @@ package seal
 
 import "bytes"
 
+// Diff holds the differences between two DirSeals.
 type Diff struct {
 	Identical   bool
 	HashChecked bool
@@ -13,10 +14,10 @@ type Diff struct {
 
 	FilesMissing []*FileSeal
 	FilesAdded   []*FileSeal
-
-	Changes []*FileDiff
+	FilesChanged []*FileDiff
 }
 
+// FileDiff holds the differences between two FileSeals.
 type FileDiff struct {
 	Name string
 
@@ -29,6 +30,7 @@ type FileDiff struct {
 	SHA256Matches   bool
 }
 
+// DiffSeals finds all differences between two DirSeals.
 func DiffSeals(want, have *DirSeal, checkHash bool) *Diff {
 	diff := &Diff{
 		HashChecked:      checkHash,
@@ -41,12 +43,30 @@ func DiffSeals(want, have *DirSeal, checkHash bool) *Diff {
 		diff.SHA256Matches = true
 	}
 
-	type joined struct {
+	diffFiles(diff, want, have, checkHash)
+
+	if diff.NameMatches &&
+		diff.TotalSizeMatches &&
+		diff.ModifiedMatches &&
+		diff.SHA256Matches &&
+		len(diff.FilesAdded) == 0 &&
+		len(diff.FilesMissing) == 0 &&
+		len(diff.FilesChanged) == 0 {
+		diff.Identical = true
+	}
+	return diff
+}
+
+// diffFiles adds the differences between the file slices of
+// the two DirSeals to the diff.
+func diffFiles(d *Diff, want, have *DirSeal, checkHash bool) {
+	type joinedSeals struct {
 		want *FileSeal
 		have *FileSeal
 	}
 
-	allFiles := map[string]joined{}
+	// join files from both seals in one map for easy handling
+	allFiles := map[string]joinedSeals{}
 	for _, file := range want.Files {
 		f := allFiles[file.Name]
 		f.want = file
@@ -60,44 +80,33 @@ func DiffSeals(want, have *DirSeal, checkHash bool) *Diff {
 
 	for _, file := range allFiles {
 		if file.want != nil && file.have == nil {
-			diff.FilesMissing = append(diff.FilesMissing, file.want)
+			d.FilesMissing = append(d.FilesMissing, file.want)
 			continue
 		}
 		if file.have != nil && file.want == nil {
-			diff.FilesAdded = append(diff.FilesAdded, file.have)
+			d.FilesAdded = append(d.FilesAdded, file.have)
 			continue
 		}
 
-		d := &FileDiff{
+		fd := &FileDiff{
 			IsDirMatches:    file.want.IsDir == file.have.IsDir,
 			SizeMatches:     file.want.Size == file.have.Size,
 			ModifiedMatches: file.want.Modified.Equal(file.have.Modified),
 			SHA256Matches:   bytes.Equal(file.want.SHA256, file.have.SHA256),
 		}
 		if !checkHash {
-			d.SHA256Matches = true
+			fd.SHA256Matches = true
 		}
-		if d.IsDirMatches &&
-			d.SizeMatches &&
-			d.ModifiedMatches &&
-			d.SHA256Matches {
+		if fd.IsDirMatches &&
+			fd.SizeMatches &&
+			fd.ModifiedMatches &&
+			fd.SHA256Matches {
 			continue
 		}
 
-		d.Name = file.want.Name
-		d.Want = file.want
-		d.Have = file.have
-		diff.Changes = append(diff.Changes, d)
+		fd.Name = file.want.Name
+		fd.Want = file.want
+		fd.Have = file.have
+		d.FilesChanged = append(d.FilesChanged, fd)
 	}
-
-	if diff.NameMatches &&
-		diff.TotalSizeMatches &&
-		diff.ModifiedMatches &&
-		diff.SHA256Matches &&
-		len(diff.FilesAdded) == 0 &&
-		len(diff.FilesMissing) == 0 &&
-		len(diff.Changes) == 0 {
-		diff.Identical = true
-	}
-	return diff
 }

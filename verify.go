@@ -7,7 +7,7 @@ import (
 )
 
 // VerifyPath checks all files and directories against the
-// seal JSON files by hashing all the contents.
+// seal JSON files by comparing metadata and hashing file contents.
 func VerifyPath(dirPath string) error {
 	log.Println("verifying", dirPath)
 
@@ -19,21 +19,33 @@ func VerifyPath(dirPath string) error {
 	checkHash := false
 	for _, dir := range dirs {
 		log.Println("quick checking", dir.path)
+		verifyDir(dir.path, checkHash)
+	}
 
-		currentSeal, err := sealDir(dir.path, checkHash)
-		if err != nil {
-			return errors.Wrap(err, "sealDir")
-		}
+	checkHash = true
+	for _, dir := range dirs {
+		log.Println("hashing", dir.path)
+		verifyDir(dir.path, checkHash)
+	}
+	return nil
+}
 
-		loadedSeal, err := loadSeal(dir.path)
-		if err != nil {
-			return errors.Wrap(err, "loadSeal")
-		}
+// verifyDir diffs the current contents of a directory
+// against the stored seal, with or without hashing.
+func verifyDir(dirPath string, checkHash bool) error {
+	currentSeal, err := sealDir(dirPath, checkHash)
+	if err != nil {
+		return errors.Wrap(err, "sealDir")
+	}
 
-		diff := DiffSeals(loadedSeal, currentSeal, checkHash)
-		if !diff.Identical {
-			log.Println("seals differ for", dir.path)
-		}
+	loadedSeal, err := loadSeal(dirPath)
+	if err != nil {
+		return errors.Wrap(err, "loadSeal")
+	}
+
+	diff := DiffSeals(loadedSeal, currentSeal, checkHash)
+	if !diff.Identical {
+		log.Println("seals differ for", dirPath)
 	}
 	return nil
 }
