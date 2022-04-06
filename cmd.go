@@ -56,7 +56,8 @@ func runVerifyCmd(cmd *cobra.Command, args []string) error {
 
 	for _, arg := range args {
 		PrintVerify = true
-		err := VerifyPath(arg)
+		print := true
+		_, err := VerifyPath(arg, print)
 		if err != nil {
 			return errors.Wrap(err, "VerifyPath")
 		}

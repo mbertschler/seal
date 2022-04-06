@@ -34,14 +34,14 @@ func SealPath(dirPath string) ([]*dir, error) {
 		hash := true
 		seal, err := sealDir(dir.path, hash)
 		if err != nil {
-			return nil, errors.Wrap(err, "sealDir")
+			return nil, errors.Wrapf(err, "sealDir %q", dir.path)
 		}
 
 		dir.seal = seal
 
 		err = seal.UpdateSeal(dir.path)
 		if err != nil {
-			return nil, errors.Wrap(err, "seal.WriteDir")
+			return nil, errors.Wrapf(err, "seal.UpdateSeal %q", dir.path)
 		}
 	}
 	return dirs, nil

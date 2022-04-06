@@ -10,14 +10,14 @@ var PrintVerify = false
 
 // VerifyPath checks all files and directories against the
 // seal JSON files by comparing metadata and hashing file contents.
-func VerifyPath(dirPath string) error {
+func VerifyPath(dirPath string, print bool) ([]*dir, error) {
 	if PrintVerify {
 		log.Println("verifying", dirPath)
 	}
 
 	dirs, err := indexDirectories(dirPath)
 	if err != nil {
-		return errors.Wrap(err, "indexDirectories")
+		return nil, errors.Wrap(err, "indexDirectories")
 	}
 
 	checkHash := false
@@ -25,7 +25,14 @@ func VerifyPath(dirPath string) error {
 		if PrintVerify {
 			log.Println("quick checking", dir.path)
 		}
-		verifyDir(dir.path, checkHash)
+		diff, err := verifyDir(dir.path, checkHash)
+		if err != nil {
+			return nil, errors.Wrapf(err, "quick checking %q", dir.path)
+		}
+		if print {
+			diff.PrintDifferences()
+		}
+		dir.quick = diff
 	}
 
 	checkHash = true
@@ -33,25 +40,31 @@ func VerifyPath(dirPath string) error {
 		if PrintVerify {
 			log.Println("hashing", dir.path)
 		}
-		verifyDir(dir.path, checkHash)
+		diff, err := verifyDir(dir.path, checkHash)
+		if err != nil {
+			return nil, errors.Wrapf(err, "hashing %q", dir.path)
+		}
+		if print {
+			diff.PrintDifferences()
+		}
+		dir.hash = diff
 	}
-	return nil
+	return dirs, nil
 }
 
 // verifyDir diffs the current contents of a directory
 // against the stored seal, with or without hashing.
-func verifyDir(dirPath string, checkHash bool) error {
+func verifyDir(dirPath string, checkHash bool) (*Diff, error) {
 	currentSeal, err := sealDir(dirPath, checkHash)
 	if err != nil {
-		return errors.Wrap(err, "sealDir")
+		return nil, errors.Wrap(err, "sealDir")
 	}
 
 	loadedSeal, err := loadSeal(dirPath)
 	if err != nil {
-		return errors.Wrap(err, "loadSeal")
+		return nil, errors.Wrap(err, "loadSeal")
 	}
 
 	diff := DiffSeals(loadedSeal, currentSeal, checkHash)
-	diff.PrintDifferences()
-	return nil
+	return diff, nil
 }

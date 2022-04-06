@@ -14,7 +14,10 @@ import (
 type dir struct {
 	path  string
 	depth int
+
 	seal  *DirSeal
+	quick *Diff
+	hash  *Diff
 }
 
 // indexDirectories returns all subdirectories with info about their depth.
