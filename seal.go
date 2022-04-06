@@ -13,30 +13,38 @@ import (
 	"github.com/pkg/errors"
 )
 
+var PrintSealing = false
+
 // SealPath calculates seals for the given path and all subdirectories
 // and writes them into a seal JSON file per directory.
-func SealPath(dirPath string) error {
-	log.Println("sealing", dirPath)
+func SealPath(dirPath string) ([]*dir, error) {
+	if PrintSealing {
+		log.Println("sealing", dirPath)
+	}
 
 	dirs, err := indexDirectories(dirPath)
 	if err != nil {
-		return errors.Wrap(err, "indexDirectories")
+		return nil, errors.Wrap(err, "indexDirectories")
 	}
 
 	for _, dir := range dirs {
-		log.Println("sealing", dir.path)
+		if PrintSealing {
+			log.Println("sealing", dir.path)
+		}
 		hash := true
 		seal, err := sealDir(dir.path, hash)
 		if err != nil {
-			return errors.Wrap(err, "sealDir")
+			return nil, errors.Wrap(err, "sealDir")
 		}
 
-		err = seal.WriteFile(dir.path)
+		dir.seal = seal
+
+		err = seal.UpdateSeal(dir.path)
 		if err != nil {
-			return errors.Wrap(err, "seal.WriteDir")
+			return nil, errors.Wrap(err, "seal.WriteDir")
 		}
 	}
-	return nil
+	return dirs, nil
 }
 
 // sealDir turns all files and subdirectories into a DirSeal.

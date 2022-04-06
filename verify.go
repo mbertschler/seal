@@ -6,10 +6,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+var PrintVerify = false
+
 // VerifyPath checks all files and directories against the
 // seal JSON files by comparing metadata and hashing file contents.
 func VerifyPath(dirPath string) error {
-	log.Println("verifying", dirPath)
+	if PrintVerify {
+		log.Println("verifying", dirPath)
+	}
 
 	dirs, err := indexDirectories(dirPath)
 	if err != nil {
@@ -18,13 +22,17 @@ func VerifyPath(dirPath string) error {
 
 	checkHash := false
 	for _, dir := range dirs {
-		log.Println("quick checking", dir.path)
+		if PrintVerify {
+			log.Println("quick checking", dir.path)
+		}
 		verifyDir(dir.path, checkHash)
 	}
 
 	checkHash = true
 	for _, dir := range dirs {
-		log.Println("hashing", dir.path)
+		if PrintVerify {
+			log.Println("hashing", dir.path)
+		}
 		verifyDir(dir.path, checkHash)
 	}
 	return nil

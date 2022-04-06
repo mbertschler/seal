@@ -14,11 +14,12 @@ import (
 type dir struct {
 	path  string
 	depth int
+	seal  *DirSeal
 }
 
 // indexDirectories returns all subdirectories with info about their depth.
 // The deepest nested directories are sorted first.
-func indexDirectories(dirPath string) ([]dir, error) {
+func indexDirectories(dirPath string) ([]*dir, error) {
 	info, err := os.Lstat(dirPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "Lstat")
@@ -27,7 +28,7 @@ func indexDirectories(dirPath string) ([]dir, error) {
 		return nil, fmt.Errorf("%q is not a directory", dirPath)
 	}
 
-	out := []dir{}
+	out := []*dir{}
 	err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -35,7 +36,7 @@ func indexDirectories(dirPath string) ([]dir, error) {
 		if d.IsDir() {
 			path = filepath.Clean(path)
 			parts := strings.Split(path, "/")
-			out = append(out, dir{path: path, depth: len(parts)})
+			out = append(out, &dir{path: path, depth: len(parts)})
 		}
 		return nil
 	})

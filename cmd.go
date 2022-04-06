@@ -34,7 +34,8 @@ func runSealCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, arg := range args {
-		err := SealPath(arg)
+		PrintSealing = true
+		_, err := SealPath(arg)
 		if err != nil {
 			return errors.Wrap(err, "SealPath")
 		}
@@ -54,6 +55,7 @@ func runVerifyCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, arg := range args {
+		PrintVerify = true
 		err := VerifyPath(arg)
 		if err != nil {
 			return errors.Wrap(err, "VerifyPath")

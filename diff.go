@@ -72,11 +72,17 @@ func diffFiles(d *Diff, want, have *DirSeal, checkHash bool) {
 	// join files from both seals in one map for easy handling
 	allFiles := map[string]joinedSeals{}
 	for _, file := range want.Files {
+		if !file.exists() {
+			continue
+		}
 		f := allFiles[file.Name]
 		f.want = file
 		allFiles[file.Name] = f
 	}
 	for _, file := range have.Files {
+		if !file.exists() {
+			continue
+		}
 		f := allFiles[file.Name]
 		f.have = file
 		allFiles[file.Name] = f

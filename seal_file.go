@@ -2,6 +2,7 @@ package seal
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"os"
@@ -24,11 +25,11 @@ const SealFile = "_seal.json"
 type DirSeal struct {
 	Name      string
 	TotalSize int64
+	SHA256    []byte
 	Modified  time.Time
 	Sealed    time.Time
-	Verified  time.Time
-	SHA256    []byte
-	Files     []*FileSeal
+	// Verified  time.Time
+	Files []*FileSeal
 }
 
 // FileSeal represents one file inside a directory.
@@ -37,19 +38,35 @@ type DirSeal struct {
 //
 // The SHA256 is calculated from the contents of the file.
 type FileSeal struct {
+	OldVersion bool `json:",omitempty"`
+	Deleted    bool `json:",omitempty"`
+
 	Name     string
 	IsDir    bool `json:",omitempty"`
 	Size     int64
+	SHA256   []byte
 	Modified time.Time
 	Sealed   time.Time
-	Verified time.Time
-	SHA256   []byte
+	// Verified   time.Time
 }
 
-// WriteFile writes the seal to the directory in JSON format.
-func (d *DirSeal) WriteFile(dir string) error {
+func (f *FileSeal) exists() bool {
+	return !f.Deleted && !f.OldVersion
+}
+
+// UpdateSeal writes the seal to the directory in JSON format,
+// joining it with the files seals of an al existing file.
+func (d *DirSeal) UpdateSeal(dirPath string) error {
+	loaded, err := loadSeal(dirPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return errors.Wrap(err, "loadSeal")
+	}
+	if loaded != nil {
+		d.joinWithExisting(loaded)
+	}
+
 	d.sort()
-	file, err := os.Create(path.Join(dir, SealFile))
+	file, err := os.Create(path.Join(dirPath, SealFile))
 	if err != nil {
 		return errors.Wrap(err, "Create seal")
 	}
@@ -58,6 +75,29 @@ func (d *DirSeal) WriteFile(dir string) error {
 	enc.SetIndent("", "\t")
 	err = enc.Encode(d)
 	return errors.Wrap(err, "Encode seal")
+}
+
+// joinWithExisting adds deleted and changed files of a
+// previous seal to the current seal Files slice.
+func (d *DirSeal) joinWithExisting(existing *DirSeal) {
+	checkHash := true
+	diff := DiffSeals(existing, d, checkHash)
+
+	// keep old versions and deleted files in the seal
+	for _, file := range existing.Files {
+		if !file.exists() {
+			d.Files = append(d.Files, file)
+		}
+	}
+
+	for _, file := range diff.FilesMissing {
+		file.Deleted = true
+		d.Files = append(d.Files, file)
+	}
+	for _, fd := range diff.FilesChanged {
+		fd.Want.OldVersion = true
+		d.Files = append(d.Files, fd.Want)
+	}
 }
 
 // sort sorts the file array by names.
@@ -73,6 +113,10 @@ func (d *DirSeal) hash() error {
 
 	dirHash := sha256.New()
 	for _, file := range d.Files {
+		if !file.exists() {
+			continue
+		}
+
 		// sum the file size or total subdirectory size
 		// converted into 8 bytes in big endian order
 		size := make([]byte, 8)
@@ -88,4 +132,9 @@ func (d *DirSeal) hash() error {
 
 	d.SHA256 = dirHash.Sum(nil)
 	return nil
+}
+
+// Base64 encodes a byte slice to a base64 string.
+func Base64(b []byte) string {
+	return base64.StdEncoding.EncodeToString(b)
 }
