@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -30,9 +31,10 @@ type FileDiff struct {
 	Want *FileSeal
 	Have *FileSeal
 
-	IsDirMatches  bool
-	SizeMatches   bool
-	SHA256Matches bool
+	IsDirMatches    bool
+	SizeMatches     bool
+	ModifiedMatches bool
+	SHA256Matches   bool
 }
 
 // DiffSeals finds all differences between two DirSeals.
@@ -101,15 +103,21 @@ func diffFiles(d *Diff, want, have *DirSeal, checkHash bool) {
 		}
 
 		fd := &FileDiff{
-			IsDirMatches:  file.want.IsDir == file.have.IsDir,
-			SizeMatches:   file.want.Size == file.have.Size,
-			SHA256Matches: bytes.Equal(file.want.SHA256, file.have.SHA256),
+			IsDirMatches:    file.want.IsDir == file.have.IsDir,
+			SizeMatches:     file.want.Size == file.have.Size,
+			ModifiedMatches: file.want.Modified.Equal(file.have.Modified),
+			SHA256Matches:   bytes.Equal(file.want.SHA256, file.have.SHA256),
 		}
-		if !checkHash {
+
+		if checkHash {
+			fd.ModifiedMatches = true
+		} else {
 			fd.SHA256Matches = true
 		}
+
 		if fd.IsDirMatches &&
 			fd.SizeMatches &&
+			fd.ModifiedMatches &&
 			fd.SHA256Matches {
 			continue
 		}
@@ -161,6 +169,13 @@ func (d *Diff) PrintDifferences() {
 				differences += ", "
 			}
 			differences += fmt.Sprintf("Size is:%d want:%d", f.Have.Size, f.Want.Size)
+		}
+		if !f.ModifiedMatches {
+			if len(meta) != 0 {
+				meta += ", "
+			}
+			differences += fmt.Sprintf("Modified is:%s want:%s",
+				d.Have.Modified.Format(time.RFC3339), d.Want.Modified.Format(time.RFC3339))
 		}
 		if !f.SHA256Matches {
 			if len(differences) != 0 {

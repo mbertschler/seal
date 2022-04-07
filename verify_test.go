@@ -44,11 +44,13 @@ func TestVerify(t *testing.T) {
 	assert.Equal(t, 1, len(dirs[1].hash.FilesAdded))
 	assert.Equal(t, 0, len(dirs[1].quick.FilesMissing))
 	assert.Equal(t, 0, len(dirs[1].hash.FilesMissing))
-	assert.Equal(t, 0, len(dirs[1].quick.FilesChanged))
+	assert.Equal(t, 1, len(dirs[1].quick.FilesChanged))
 	assert.Equal(t, 1, len(dirs[1].hash.FilesChanged))
 
 	assert.Equal(t, "b.txt", dirs[1].quick.FilesAdded[0].Name)
 	assert.Equal(t, "b.txt", dirs[1].hash.FilesAdded[0].Name)
+	assert.Equal(t, "a.txt", dirs[1].quick.FilesChanged[0].Have.Name)
+	assert.Equal(t, false, dirs[1].quick.FilesChanged[0].ModifiedMatches)
 	assert.Equal(t, "a.txt", dirs[1].hash.FilesChanged[0].Have.Name)
 	assert.Equal(t, false, dirs[1].hash.FilesChanged[0].SHA256Matches)
 }
