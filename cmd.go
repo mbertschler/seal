@@ -3,6 +3,10 @@ package seal
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,6 +22,8 @@ var (
 	}
 	Before        time.Time
 	PrintInterval time.Duration
+
+	WriteLock sync.Mutex
 )
 
 // RootCmd is the what that should be executed by the seal command.
@@ -40,6 +46,15 @@ func RootCmd() *cobra.Command {
 					}
 				}
 			}
+
+			go func() {
+				sigs := make(chan os.Signal, 1)
+				signal.Notify(sigs, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+				s := <-sigs
+				log.Printf("got %v signal, exiting", s)
+				WriteLock.Lock()
+				os.Exit(0)
+			}()
 			return err
 		},
 	}

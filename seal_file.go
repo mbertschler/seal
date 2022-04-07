@@ -68,6 +68,10 @@ func (d *DirSeal) UpdateSeal(dirPath string, printChanges bool) error {
 	}
 
 	d.sort()
+
+	WriteLock.Lock()
+	defer WriteLock.Unlock()
+
 	file, err := os.Create(path.Join(dirPath, SealFile))
 	if err != nil {
 		return errors.Wrap(err, "Create seal")
