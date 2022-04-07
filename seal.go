@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/pkg/errors"
 )
 
@@ -100,7 +101,11 @@ func sealDir(dirPath string, hash bool) (*DirSeal, error) {
 	for _, file := range files {
 		err = addFileToSeal(seal, dirPath, file, hash)
 		if err != nil {
-			return seal, errors.Wrap(err, "addFileToSeal")
+			if errors.Is(err, fs.ErrNotExist) {
+				log.Println(color.YellowString("file doesn't exist: %v", err))
+			} else {
+				log.Println(color.RedString("unexpected error in addFileToSeal: %v", err))
+			}
 		}
 	}
 
