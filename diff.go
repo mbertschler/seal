@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+
+	"github.com/fatih/color"
 )
 
 // Diff holds the differences between two DirSeals.
@@ -137,17 +139,17 @@ func (d *Diff) PrintDifferences() {
 		if len(meta) != 0 {
 			meta += ", "
 		}
-		meta += fmt.Sprintf("SHA256 is:%x want:%x", d.Have.SHA256, d.Want.SHA256)
+		meta += "SHA256 doesn't match"
 	}
 	if len(meta) > 0 {
-		log.Println("dir differs:", meta)
+		log.Println(color.RedString("dir differs: %q %s", d.Have.Name, meta))
 	}
 
 	for _, f := range d.FilesAdded {
-		log.Printf("added file: %q", f.Name)
+		log.Printf(color.GreenString("added file: %q", f.Name))
 	}
 	for _, f := range d.FilesMissing {
-		log.Printf("missing file: %q", f.Name)
+		log.Printf(color.RedString("missing file: %q", f.Name))
 	}
 	for _, f := range d.FilesChanged {
 		var differences string
@@ -164,8 +166,8 @@ func (d *Diff) PrintDifferences() {
 			if len(differences) != 0 {
 				differences += ", "
 			}
-			differences += fmt.Sprintf("SHA256 is:%x want:%x", f.Have.SHA256, f.Want.SHA256)
+			differences += "SHA256 doesn't match"
 		}
-		log.Printf("file differs: %q %s", f.Want.Name, differences)
+		log.Printf(color.RedString("file differs: %q %s", f.Want.Name, differences))
 	}
 }

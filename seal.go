@@ -39,7 +39,7 @@ func SealPath(dirPath string) ([]*dir, error) {
 
 		dir.seal = seal
 
-		err = seal.UpdateSeal(dir.path)
+		err = seal.UpdateSeal(dir.path, PrintSealing)
 		if err != nil {
 			return nil, errors.Wrapf(err, "seal.UpdateSeal %q", dir.path)
 		}

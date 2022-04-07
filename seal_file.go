@@ -5,11 +5,13 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"log"
 	"os"
 	"path"
 	"sort"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/pkg/errors"
 )
 
@@ -56,13 +58,13 @@ func (f *FileSeal) exists() bool {
 
 // UpdateSeal writes the seal to the directory in JSON format,
 // joining it with the files seals of an al existing file.
-func (d *DirSeal) UpdateSeal(dirPath string) error {
+func (d *DirSeal) UpdateSeal(dirPath string, printChanges bool) error {
 	loaded, err := loadSeal(dirPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return errors.Wrap(err, "loadSeal")
 	}
 	if loaded != nil {
-		d.joinWithExisting(loaded)
+		d.joinWithExisting(loaded, printChanges, dirPath)
 	}
 
 	d.sort()
@@ -79,7 +81,7 @@ func (d *DirSeal) UpdateSeal(dirPath string) error {
 
 // joinWithExisting adds deleted and changed files of a
 // previous seal to the current seal Files slice.
-func (d *DirSeal) joinWithExisting(existing *DirSeal) {
+func (d *DirSeal) joinWithExisting(existing *DirSeal, printChanges bool, dirPath string) {
 	checkHash := true
 	diff := DiffSeals(existing, d, checkHash)
 
@@ -91,10 +93,16 @@ func (d *DirSeal) joinWithExisting(existing *DirSeal) {
 	}
 
 	for _, file := range diff.FilesMissing {
+		if printChanges {
+			log.Print(color.RedString("missing file: %q in %q", file.Name, dirPath))
+		}
 		file.Deleted = true
 		d.Files = append(d.Files, file)
 	}
 	for _, fd := range diff.FilesChanged {
+		if printChanges {
+			log.Print(color.RedString("changed file: %q in %q", fd.Want.Name, dirPath))
+		}
 		fd.Want.OldVersion = true
 		d.Files = append(d.Files, fd.Want)
 	}
