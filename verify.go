@@ -2,11 +2,16 @@ package seal
 
 import (
 	"log"
+	"time"
 
 	"github.com/pkg/errors"
 )
 
-var PrintVerify = false
+var (
+	PrintVerify    = false
+	PrintAllVerify = false
+	verifyMode     = ""
+)
 
 // VerifyPath checks all files and directories against the
 // seal JSON files by comparing metadata and hashing file contents.
@@ -19,9 +24,30 @@ func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 		return nil, errors.Wrap(err, "indexDirectories")
 	}
 
+	dirsCount = len(dirs)
+	verifyMode = "metadata"
+
+	if PrintSealing {
+		tick := time.NewTicker(PrintInterval)
+		defer tick.Stop()
+		stop := make(chan bool)
+		go func() {
+			for {
+				select {
+				case <-tick.C:
+					sealingMeta.Lock()
+					log.Printf("%.1f%% done, %s %s", float64(dirsDone)/float64(dirsCount)*100, verifyMode, sealingFile)
+					sealingMeta.Unlock()
+				case <-stop:
+					return
+				}
+			}
+		}()
+	}
+
 	checkHash := false
 	for _, dir := range dirs {
-		if PrintVerify {
+		if PrintAllVerify {
 			log.Println("quick checking", dir.path)
 		}
 		diff, err := verifyDir(dir.path, checkHash)
@@ -32,11 +58,19 @@ func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 			diff.PrintDifferences()
 		}
 		dir.quick = diff
+		sealingMeta.Lock()
+		dirsDone++
+		sealingMeta.Unlock()
 	}
+
+	sealingMeta.Lock()
+	dirsDone = 0
+	verifyMode = "hashing"
+	sealingMeta.Unlock()
 
 	checkHash = true
 	for _, dir := range dirs {
-		if PrintVerify {
+		if PrintAllVerify {
 			log.Println("hashing", dir.path)
 		}
 		diff, err := verifyDir(dir.path, checkHash)
@@ -47,6 +81,9 @@ func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 			diff.PrintDifferences()
 		}
 		dir.hash = diff
+		sealingMeta.Lock()
+		dirsDone++
+		sealingMeta.Unlock()
 	}
 	return dirs, nil
 }
