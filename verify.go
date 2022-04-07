@@ -27,7 +27,7 @@ func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 	dirsCount = len(dirs)
 	verifyMode = "metadata"
 
-	if PrintSealing {
+	if PrintVerify {
 		tick := time.NewTicker(PrintInterval)
 		defer tick.Stop()
 		stop := make(chan bool)
@@ -84,6 +84,13 @@ func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 		sealingMeta.Lock()
 		dirsDone++
 		sealingMeta.Unlock()
+	}
+
+	if len(nonRegularFiles) > 0 {
+		log.Println("skipped non regular files:")
+		for mode, count := range nonRegularFiles {
+			log.Println(mode.String(), count)
+		}
 	}
 	return dirs, nil
 }

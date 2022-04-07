@@ -154,10 +154,10 @@ func (d *Diff) PrintDifferences() {
 	}
 
 	for _, f := range d.FilesAdded {
-		log.Printf(color.GreenString("added file: %q", f.Name))
+		log.Println(color.GreenString("added file: %q", f.Name))
 	}
 	for _, f := range d.FilesMissing {
-		log.Printf(color.RedString("missing file: %q", f.Name))
+		log.Println(color.RedString("missing file: %q", f.Name))
 	}
 	for _, f := range d.FilesChanged {
 		var differences string
@@ -183,6 +183,6 @@ func (d *Diff) PrintDifferences() {
 			}
 			differences += "SHA256 doesn't match"
 		}
-		log.Printf(color.RedString("file differs: %q %s", f.Want.Name, differences))
+		log.Println(color.RedString("file differs: %q %s", f.Want.Name, differences))
 	}
 }

@@ -76,6 +76,13 @@ func SealPath(dirPath string) ([]*dir, error) {
 		dirsDone++
 		sealingMeta.Unlock()
 	}
+
+	if len(nonRegularFiles) > 0 {
+		log.Println("skipped non regular files:")
+		for mode, count := range nonRegularFiles {
+			log.Println(mode.String(), count)
+		}
+	}
 	return dirs, nil
 }
 
@@ -119,6 +126,8 @@ func sealDir(dirPath string, hash bool) (*DirSeal, error) {
 	return seal, errors.Wrap(err, "WriteSeal")
 }
 
+var nonRegularFiles = map[os.FileMode]int{}
+
 // addFileToSeal appends a FileSeal to the DirSeal.
 func addFileToSeal(seal *DirSeal, dirPath string, file fs.DirEntry, hash bool) error {
 	if file.Name() == SealFile {
@@ -138,6 +147,12 @@ func addFileToSeal(seal *DirSeal, dirPath string, file fs.DirEntry, hash bool) e
 			return errors.Wrap(err, "sealSubDir")
 		}
 	} else {
+		if !file.Type().IsRegular() {
+			// log.Printf("not a regular file %s %q", file.Type().String(), fullPath)
+			nonRegularFiles[file.Type()]++
+			return nil
+		}
+
 		f, err = sealFile(fullPath, hash)
 		if err != nil {
 			return errors.Wrap(err, "sealFile")

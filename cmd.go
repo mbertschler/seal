@@ -39,7 +39,7 @@ func RootCmd() *cobra.Command {
 			var err error
 			if beforeFlag != "" {
 				for _, layout := range timeLayouts {
-					Before, err = time.Parse(layout, beforeFlag)
+					Before, err = time.ParseInLocation(layout, beforeFlag, time.Local)
 					if err == nil {
 						log.Println("filtering out directories sealed after", Before)
 						break
