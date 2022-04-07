@@ -8,27 +8,54 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 )
 
-var PrintSealing = false
+var (
+	PrintSealing    = false
+	PrintAllSealing = false
+	sealingMeta     sync.Mutex
+	sealingFile     string
+	dirsCount       int
+	dirsDone        int
+)
 
 // SealPath calculates seals for the given path and all subdirectories
 // and writes them into a seal JSON file per directory.
 func SealPath(dirPath string) ([]*dir, error) {
 	if PrintSealing {
-		log.Println("sealing", dirPath)
+		log.Println("indexing", dirPath)
 	}
-
 	dirs, err := indexDirectories(dirPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexDirectories")
 	}
 
+	dirsCount = len(dirs)
+
+	if PrintSealing {
+		tick := time.NewTicker(PrintInterval)
+		defer tick.Stop()
+		stop := make(chan bool)
+		go func() {
+			for {
+				select {
+				case <-tick.C:
+					sealingMeta.Lock()
+					log.Printf("%.1f%% done, sealing %s", float64(dirsDone)/float64(dirsCount)*100, sealingFile)
+					sealingMeta.Unlock()
+				case <-stop:
+					return
+				}
+			}
+		}()
+	}
+
 	for _, dir := range dirs {
-		if PrintSealing {
+		if PrintAllSealing {
 			log.Println("sealing", dir.path)
 		}
 		hash := true
@@ -43,6 +70,10 @@ func SealPath(dirPath string) ([]*dir, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "seal.UpdateSeal %q", dir.path)
 		}
+
+		sealingMeta.Lock()
+		dirsDone++
+		sealingMeta.Unlock()
 	}
 	return dirs, nil
 }
@@ -89,6 +120,10 @@ func addFileToSeal(seal *DirSeal, dirPath string, file fs.DirEntry, hash bool) e
 		return nil
 	}
 	fullPath := filepath.Join(dirPath, file.Name())
+
+	sealingMeta.Lock()
+	sealingFile = fullPath
+	sealingMeta.Unlock()
 
 	var f *FileSeal
 	var err error
