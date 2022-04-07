@@ -45,6 +45,7 @@ func indexDirectories(dirPath string) ([]*dir, error) {
 		defer tick.Stop()
 	}
 
+	skipped := 0
 	out := []*dir{}
 	err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -52,6 +53,14 @@ func indexDirectories(dirPath string) ([]*dir, error) {
 			return nil
 		}
 		if d.IsDir() {
+			if !Before.IsZero() {
+				seal, err := loadSeal(path)
+				if err == nil && seal.Sealed.After(Before) {
+					skipped++
+					return fs.SkipDir
+				}
+			}
+
 			path = filepath.Clean(path)
 			parts := strings.Split(path, "/")
 			out = append(out, &dir{path: path, depth: len(parts)})
@@ -68,6 +77,10 @@ func indexDirectories(dirPath string) ([]*dir, error) {
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "WalkDir")
+	}
+
+	if PrintIndexProgress {
+		log.Println("indexed", len(out), "directories and skipped", skipped)
 	}
 
 	// deepest directories first, because we the seals for above directories

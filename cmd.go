@@ -9,6 +9,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	beforeFlag  string
+	timeLayouts = []string{
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+		"2006-01-02",
+	}
+	Before        time.Time
+	PrintInterval time.Duration
+)
+
 // RootCmd is the what that should be executed by the seal command.
 func RootCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -18,10 +29,26 @@ func RootCmd() *cobra.Command {
 			fmt.Println("Hello, I'm seal! 🦭")
 			cmd.Usage()
 		},
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			var err error
+			if beforeFlag != "" {
+				for _, layout := range timeLayouts {
+					Before, err = time.Parse(layout, beforeFlag)
+					if err == nil {
+						log.Println("filtering out directories sealed after", Before)
+						break
+					}
+				}
+			}
+			return err
+		},
 	}
 	cmd.AddCommand(sealCmd)
 	cmd.AddCommand(verifyCmd)
 	cmd.AddCommand(indexCmd)
+
+	cmd.PersistentFlags().StringVarP(&beforeFlag, "before", "b", "", "ignore directories sealed after this time")
+	cmd.PersistentFlags().DurationVarP(&PrintInterval, "interval", "i", time.Minute, "interval at which progress is reported")
 	return cmd
 }
 
@@ -39,6 +66,7 @@ func runSealCmd(cmd *cobra.Command, args []string) error {
 	start := time.Now()
 	for _, arg := range args {
 		PrintSealing = true
+		PrintIndexProgress = true
 		_, err := SealPath(arg)
 		if err != nil {
 			return errors.Wrap(err, "SealPath")
@@ -63,8 +91,9 @@ func runVerifyCmd(cmd *cobra.Command, args []string) error {
 	start := time.Now()
 	for _, arg := range args {
 		PrintVerify = true
-		print := true
-		_, err := VerifyPath(arg, print)
+		PrintIndexProgress = true
+		printDifferences := true
+		_, err := VerifyPath(arg, printDifferences)
 		if err != nil {
 			return errors.Wrap(err, "VerifyPath")
 		}

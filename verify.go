@@ -10,11 +10,10 @@ var PrintVerify = false
 
 // VerifyPath checks all files and directories against the
 // seal JSON files by comparing metadata and hashing file contents.
-func VerifyPath(dirPath string, print bool) ([]*dir, error) {
+func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 	if PrintVerify {
-		log.Println("verifying", dirPath)
+		log.Println("indexing", dirPath)
 	}
-
 	dirs, err := indexDirectories(dirPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexDirectories")
@@ -29,7 +28,7 @@ func VerifyPath(dirPath string, print bool) ([]*dir, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "quick checking %q", dir.path)
 		}
-		if print {
+		if printDifferences {
 			diff.PrintDifferences()
 		}
 		dir.quick = diff
@@ -44,7 +43,7 @@ func VerifyPath(dirPath string, print bool) ([]*dir, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "hashing %q", dir.path)
 		}
-		if print {
+		if printDifferences {
 			diff.PrintDifferences()
 		}
 		dir.hash = diff
