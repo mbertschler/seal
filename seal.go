@@ -22,6 +22,11 @@ var (
 	sealingFile     string
 	dirsCount       int
 	dirsDone        int
+
+	filesToIgnore = map[string]bool{
+		SealFile:    true,
+		".DS_Store": true,
+	}
 )
 
 // SealPath calculates seals for the given path and all subdirectories
@@ -69,7 +74,7 @@ func SealPath(dirPath string) ([]*dir, error) {
 
 		err = seal.UpdateSeal(dir.path, PrintSealing)
 		if err != nil {
-			return nil, errors.Wrapf(err, "seal.UpdateSeal %q", dir.path)
+			log.Println(color.RedString("can't update seal: %v", err))
 		}
 
 		sealingMeta.Lock()
@@ -130,7 +135,7 @@ var nonRegularFiles = map[os.FileMode]int{}
 
 // addFileToSeal appends a FileSeal to the DirSeal.
 func addFileToSeal(seal *DirSeal, dirPath string, file fs.DirEntry, hash bool) error {
-	if file.Name() == SealFile {
+	if filesToIgnore[file.Name()] {
 		return nil
 	}
 	fullPath := filepath.Join(dirPath, file.Name())

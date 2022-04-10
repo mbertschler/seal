@@ -16,7 +16,7 @@ import (
 )
 
 // SealFile is the filepath that is used in every sealed directory.
-const SealFile = "_seal.json"
+const SealFile = ".seal.json"
 
 // DirSeal represents a complete seal of the directory
 // including all files and subdirectories.
@@ -98,14 +98,22 @@ func (d *DirSeal) joinWithExisting(existing *DirSeal, printChanges bool, dirPath
 
 	for _, file := range diff.FilesMissing {
 		if printChanges {
-			log.Print(color.RedString("missing file: %q in %q", file.Name, dirPath))
+			thing := "file"
+			if file.IsDir {
+				thing = "dir"
+			}
+			log.Print(color.RedString("missing %s: %q in %q", thing, file.Name, dirPath))
 		}
 		file.Deleted = true
 		d.Files = append(d.Files, file)
 	}
 	for _, fd := range diff.FilesChanged {
 		if printChanges {
-			log.Print(color.RedString("changed file: %q in %q", fd.Want.Name, dirPath))
+			thing := "file"
+			if fd.Want.IsDir {
+				thing = "dir"
+			}
+			log.Print(color.RedString("changed %s: %q in %q", thing, fd.Want.Name, dirPath))
 		}
 		fd.Want.OldVersion = true
 		d.Files = append(d.Files, fd.Want)
