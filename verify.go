@@ -19,7 +19,8 @@ func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 	if PrintVerify {
 		log.Println("indexing", dirPath)
 	}
-	dirs, err := indexDirectories(dirPath)
+	loadSeals := false
+	dirs, err := indexDirectories(dirPath, loadSeals)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexDirectories")
 	}

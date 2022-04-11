@@ -2,6 +2,7 @@ package seal
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,4 +54,28 @@ func TestVerify(t *testing.T) {
 	assert.Equal(t, false, dirs[1].quick.FilesChanged[0].ModifiedMatches)
 	assert.Equal(t, "a.txt", dirs[1].hash.FilesChanged[0].Have.Name)
 	assert.Equal(t, false, dirs[1].hash.FilesChanged[0].SHA256Matches)
+}
+
+func TestBasepath(t *testing.T) {
+	fullPath := "/Volumes/Membox/photos/P1070520.RW2"
+
+	basePath := "/Volumes/Membox"
+	out, err := filepath.Rel(basePath, fullPath)
+	assert.NoError(t, err)
+	assert.Equal(t, "photos/P1070520.RW2", out)
+
+	basePath = "/Volumes/Membox/"
+	out, err = filepath.Rel(basePath, fullPath)
+	assert.NoError(t, err)
+	assert.Equal(t, "photos/P1070520.RW2", out)
+
+	fullPath = "/Volumes/Membox/photos/"
+	out, err = filepath.Rel(basePath, fullPath)
+	assert.NoError(t, err)
+	assert.Equal(t, "photos", out)
+
+	fullPath = "/Volumes/Membox/photos"
+	out, err = filepath.Rel(basePath, fullPath)
+	assert.NoError(t, err)
+	assert.Equal(t, "photos", out)
 }

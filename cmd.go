@@ -22,6 +22,7 @@ var (
 	}
 	Before        time.Time
 	PrintInterval time.Duration
+	IndexFile     string
 
 	WriteLock sync.Mutex
 )
@@ -64,6 +65,7 @@ func RootCmd() *cobra.Command {
 
 	cmd.PersistentFlags().StringVarP(&beforeFlag, "before", "b", "", "ignore directories sealed after this time")
 	cmd.PersistentFlags().DurationVarP(&PrintInterval, "interval", "i", time.Minute, "interval at which progress is reported")
+	cmd.PersistentFlags().StringVarP(&IndexFile, "file", "f", "", "index file path")
 	return cmd
 }
 
@@ -79,10 +81,10 @@ func runSealCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	start := time.Now()
-	for _, arg := range args {
+	for _, path := range args {
 		PrintSealing = true
 		PrintIndexProgress = true
-		_, err := SealPath(arg)
+		_, err := SealPath(path)
 		if err != nil {
 			return errors.Wrap(err, "SealPath")
 		}
@@ -104,11 +106,11 @@ func runVerifyCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	start := time.Now()
-	for _, arg := range args {
+	for _, path := range args {
 		PrintVerify = true
 		PrintIndexProgress = true
 		printDifferences := true
-		_, err := VerifyPath(arg, printDifferences)
+		_, err := VerifyPath(path, printDifferences)
 		if err != nil {
 			return errors.Wrap(err, "VerifyPath")
 		}
@@ -129,14 +131,13 @@ func runIndexCmd(cmd *cobra.Command, args []string) error {
 	}
 
 	PrintIndexProgress = true
+	start := time.Now()
 	for _, path := range args {
-		log.Println("indexing", path)
-		start := time.Now()
-		dirs, err := indexDirectories(path)
+		err := IndexPath(path, IndexFile)
 		if err != nil {
-			return errors.Wrap(err, "indexDirectories")
+			return errors.Wrap(err, "IndexPath")
 		}
-		log.Println("loaded", len(dirs), "directories in", time.Since(start))
 	}
+	log.Println("ran for", time.Since(start))
 	return nil
 }
