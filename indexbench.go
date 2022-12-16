@@ -1,9 +1,9 @@
 package seal
 
 import (
-	"encoding/json"
-	"fmt"
+	"log"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -13,12 +13,32 @@ const (
 )
 
 func IndexBench() error {
-	dirs := generateDirs(30)
-	buf, err := json.Marshal(dirs)
+	start := time.Now()
+	dirs := generateDirs(10e3)
+	log.Println("generated", len(dirs), "directories with seals in", time.Since(start))
+
+	// buf, err := json.Marshal(dirs)
+	// if err != nil {
+	// 	return err
+	// }
+	// fmt.Println(string(buf))
+
+	start = time.Now()
+	indexFile := "./benchindex.out"
+	err := os.Remove(indexFile)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(buf))
+
+	path := "basedir"
+	err = DirsToIndex(indexFile, dirs, path)
+	took := time.Since(start)
+	log.Println("indexed", len(dirs), "directories with seals in", took, "with", putOps, "writes")
+	log.Printf("%v average write time", time.Duration(float64(took)/float64(putOps)))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

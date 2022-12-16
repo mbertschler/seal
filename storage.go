@@ -90,10 +90,14 @@ func (i *Index) AddDir(dir *Dir, basePath string) error {
 			if err != nil {
 				return errors.Wrap(err, "paths.Put")
 			}
+			putOps += 2
+
 		}
 		return nil
 	})
 }
+
+var putOps int
 
 var PrintDirsToIndex = true
 
@@ -115,7 +119,7 @@ func DirsToIndex(indexPath string, dirs []Dir, basePath string) error {
 		if err != nil {
 			return errors.Wrap(err, "AddDir")
 		}
-		if PrintDirsToIndex {
+		if PrintIndexProgress {
 			select {
 			case <-tick.C:
 				log.Printf("added %.1f%% to index %q", float64(i)/float64(len(dirs))*100, dir.Path)
