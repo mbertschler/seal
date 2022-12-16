@@ -14,7 +14,7 @@ const (
 
 func IndexBench() error {
 	start := time.Now()
-	dirs := generateDirs(10e3)
+	dirs := generateDirs(1e3)
 	log.Println("generated", len(dirs), "directories with seals in", time.Since(start))
 
 	// buf, err := json.Marshal(dirs)
@@ -31,7 +31,7 @@ func IndexBench() error {
 	}
 
 	path := "basedir"
-	err = DirsToIndex(indexFile, dirs, path)
+	err = DirsToIndex(indexFile, dirs, path, IndexBoltDB)
 	took := time.Since(start)
 	log.Println("indexed", len(dirs), "directories with seals in", took, "with", putOps, "writes")
 	log.Printf("%v average write time", time.Duration(float64(took)/float64(putOps)))

@@ -10,16 +10,25 @@ import (
 	"go.etcd.io/bbolt"
 )
 
+type StorageType string
+
+const IndexBoltDB StorageType = "boltdb"
+
 var (
 	pathsBucket  = []byte("paths")
 	hashesBucket = []byte("hashes")
 )
 
-type Index struct {
+type IndexStorage interface {
+	AddDir(dir *Dir, basePath string) error
+	Close() error
+}
+
+type BoltIndex struct {
 	db *bbolt.DB
 }
 
-func Open(indexPath string) (*Index, error) {
+func OpenBoltDB(indexPath string) (*BoltIndex, error) {
 	db, err := bbolt.Open(indexPath, 0644, &bbolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, errors.Wrap(err, "bbolt.Open")
@@ -36,10 +45,10 @@ func Open(indexPath string) (*Index, error) {
 		}
 		return nil
 	})
-	return &Index{db: db}, errors.Wrap(err, "setup db")
+	return &BoltIndex{db: db}, errors.Wrap(err, "setup db")
 }
 
-func (i *Index) Close() error {
+func (i *BoltIndex) Close() error {
 	return i.db.Close()
 }
 
@@ -49,7 +58,7 @@ type StoredSeal struct {
 	File *FileSeal
 }
 
-func (i *Index) AddDir(dir *Dir, basePath string) error {
+func (i *BoltIndex) AddDir(dir *Dir, basePath string) error {
 	path, err := filepath.Rel(basePath, dir.Path)
 	if err != nil {
 		return errors.Wrap(err, "filepath.Rel")
@@ -101,12 +110,18 @@ var putOps int
 
 var PrintDirsToIndex = true
 
-func DirsToIndex(indexPath string, dirs []Dir, basePath string) error {
-	index, err := Open(indexPath)
-	if err != nil {
-		return errors.Wrap(err, "Open")
+func DirsToIndex(indexPath string, dirs []Dir, basePath string, t StorageType) error {
+	var storage IndexStorage
+	var err error
+	switch t {
+	case IndexBoltDB:
+		storage, err = OpenBoltDB(indexPath)
+		if err != nil {
+			return errors.Wrap(err, "Open")
+		}
 	}
-	defer index.Close()
+
+	defer storage.Close()
 
 	var tick *time.Ticker
 	if PrintIndexProgress {
@@ -115,7 +130,7 @@ func DirsToIndex(indexPath string, dirs []Dir, basePath string) error {
 	}
 
 	for i, dir := range dirs {
-		err = index.AddDir(&dir, basePath)
+		err := storage.AddDir(&dir, basePath)
 		if err != nil {
 			return errors.Wrap(err, "AddDir")
 		}

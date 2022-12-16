@@ -38,7 +38,7 @@ func IndexPath(path, indexFile string) error {
 	}
 	log.Println("loaded", len(dirs), "directories with seals in", time.Since(start))
 
-	return DirsToIndex(indexFile, dirs, path)
+	return DirsToIndex(indexFile, dirs, path, IndexBoltDB)
 }
 
 // indexDirectories returns all subdirectories with info about their depth.
