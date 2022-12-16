@@ -31,7 +31,7 @@ var (
 
 // SealPath calculates seals for the given path and all subdirectories
 // and writes them into a seal JSON file per directory.
-func SealPath(dirPath string) ([]*dir, error) {
+func SealPath(dirPath string) ([]Dir, error) {
 	if PrintSealing {
 		log.Println("indexing", dirPath)
 	}
@@ -63,17 +63,17 @@ func SealPath(dirPath string) ([]*dir, error) {
 
 	for _, dir := range dirs {
 		if PrintAllSealing {
-			log.Println("sealing", dir.path)
+			log.Println("sealing", dir.Path)
 		}
 		hash := true
-		seal, err := sealDir(dir.path, hash)
+		seal, err := sealDir(dir.Path, hash)
 		if err != nil {
-			return nil, errors.Wrapf(err, "sealDir %q", dir.path)
+			return nil, errors.Wrapf(err, "sealDir %q", dir.Path)
 		}
 
-		dir.seal = seal
+		dir.Seal = seal
 
-		err = seal.UpdateSeal(dir.path, PrintSealing)
+		err = seal.UpdateSeal(dir.Path, PrintSealing)
 		if err != nil {
 			log.Println(color.RedString("can't update seal: %v", err))
 		}

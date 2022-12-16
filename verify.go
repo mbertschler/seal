@@ -15,7 +15,7 @@ var (
 
 // VerifyPath checks all files and directories against the
 // seal JSON files by comparing metadata and hashing file contents.
-func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
+func VerifyPath(dirPath string, printDifferences bool) ([]Dir, error) {
 	if PrintVerify {
 		log.Println("indexing", dirPath)
 	}
@@ -49,16 +49,16 @@ func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 	checkHash := false
 	for _, dir := range dirs {
 		if PrintAllVerify {
-			log.Println("quick checking", dir.path)
+			log.Println("quick checking", dir.Path)
 		}
-		diff, err := verifyDir(dir.path, checkHash)
+		diff, err := verifyDir(dir.Path, checkHash)
 		if err != nil {
-			return nil, errors.Wrapf(err, "quick checking %q", dir.path)
+			return nil, errors.Wrapf(err, "quick checking %q", dir.Path)
 		}
 		if printDifferences {
 			diff.PrintDifferences()
 		}
-		dir.quick = diff
+		dir.QuickDiff = diff
 		sealingMeta.Lock()
 		dirsDone++
 		sealingMeta.Unlock()
@@ -72,16 +72,16 @@ func VerifyPath(dirPath string, printDifferences bool) ([]*dir, error) {
 	checkHash = true
 	for _, dir := range dirs {
 		if PrintAllVerify {
-			log.Println("hashing", dir.path)
+			log.Println("hashing", dir.Path)
 		}
-		diff, err := verifyDir(dir.path, checkHash)
+		diff, err := verifyDir(dir.Path, checkHash)
 		if err != nil {
-			return nil, errors.Wrapf(err, "hashing %q", dir.path)
+			return nil, errors.Wrapf(err, "hashing %q", dir.Path)
 		}
 		if printDifferences {
 			diff.PrintDifferences()
 		}
-		dir.hash = diff
+		dir.HashDiff = diff
 		sealingMeta.Lock()
 		dirsDone++
 		sealingMeta.Unlock()

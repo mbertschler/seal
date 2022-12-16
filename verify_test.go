@@ -20,8 +20,8 @@ func TestVerify(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, dir := range dirs {
-		assert.True(t, dir.quick.Identical)
-		assert.True(t, dir.hash.Identical)
+		assert.True(t, dir.QuickDiff.Identical)
+		assert.True(t, dir.HashDiff.Identical)
 	}
 
 	randomFile(t, TestDir+"/a.txt", 4) // different content
@@ -31,29 +31,29 @@ func TestVerify(t *testing.T) {
 	dirs, err = VerifyPath(TestDir, false)
 	require.NoError(t, err)
 
-	assert.Equal(t, 0, len(dirs[0].quick.FilesAdded))
-	assert.Equal(t, 0, len(dirs[0].hash.FilesAdded))
-	assert.Equal(t, 1, len(dirs[0].quick.FilesMissing))
-	assert.Equal(t, 1, len(dirs[0].hash.FilesMissing))
-	assert.Equal(t, 0, len(dirs[0].quick.FilesChanged))
-	assert.Equal(t, 0, len(dirs[0].hash.FilesChanged))
+	assert.Equal(t, 0, len(dirs[0].QuickDiff.FilesAdded))
+	assert.Equal(t, 0, len(dirs[0].HashDiff.FilesAdded))
+	assert.Equal(t, 1, len(dirs[0].QuickDiff.FilesMissing))
+	assert.Equal(t, 1, len(dirs[0].HashDiff.FilesMissing))
+	assert.Equal(t, 0, len(dirs[0].QuickDiff.FilesChanged))
+	assert.Equal(t, 0, len(dirs[0].HashDiff.FilesChanged))
 
-	assert.Equal(t, "d.txt", dirs[0].quick.FilesMissing[0].Name)
-	assert.Equal(t, "d.txt", dirs[0].hash.FilesMissing[0].Name)
+	assert.Equal(t, "d.txt", dirs[0].QuickDiff.FilesMissing[0].Name)
+	assert.Equal(t, "d.txt", dirs[0].HashDiff.FilesMissing[0].Name)
 
-	assert.Equal(t, 1, len(dirs[1].quick.FilesAdded))
-	assert.Equal(t, 1, len(dirs[1].hash.FilesAdded))
-	assert.Equal(t, 0, len(dirs[1].quick.FilesMissing))
-	assert.Equal(t, 0, len(dirs[1].hash.FilesMissing))
-	assert.Equal(t, 1, len(dirs[1].quick.FilesChanged))
-	assert.Equal(t, 1, len(dirs[1].hash.FilesChanged))
+	assert.Equal(t, 1, len(dirs[1].QuickDiff.FilesAdded))
+	assert.Equal(t, 1, len(dirs[1].HashDiff.FilesAdded))
+	assert.Equal(t, 0, len(dirs[1].QuickDiff.FilesMissing))
+	assert.Equal(t, 0, len(dirs[1].HashDiff.FilesMissing))
+	assert.Equal(t, 1, len(dirs[1].QuickDiff.FilesChanged))
+	assert.Equal(t, 1, len(dirs[1].HashDiff.FilesChanged))
 
-	assert.Equal(t, "b.txt", dirs[1].quick.FilesAdded[0].Name)
-	assert.Equal(t, "b.txt", dirs[1].hash.FilesAdded[0].Name)
-	assert.Equal(t, "a.txt", dirs[1].quick.FilesChanged[0].Have.Name)
-	assert.Equal(t, false, dirs[1].quick.FilesChanged[0].ModifiedMatches)
-	assert.Equal(t, "a.txt", dirs[1].hash.FilesChanged[0].Have.Name)
-	assert.Equal(t, false, dirs[1].hash.FilesChanged[0].SHA256Matches)
+	assert.Equal(t, "b.txt", dirs[1].QuickDiff.FilesAdded[0].Name)
+	assert.Equal(t, "b.txt", dirs[1].HashDiff.FilesAdded[0].Name)
+	assert.Equal(t, "a.txt", dirs[1].QuickDiff.FilesChanged[0].Have.Name)
+	assert.Equal(t, false, dirs[1].QuickDiff.FilesChanged[0].ModifiedMatches)
+	assert.Equal(t, "a.txt", dirs[1].HashDiff.FilesChanged[0].Have.Name)
+	assert.Equal(t, false, dirs[1].HashDiff.FilesChanged[0].SHA256Matches)
 }
 
 func TestBasepath(t *testing.T) {

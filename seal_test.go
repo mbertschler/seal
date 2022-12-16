@@ -155,17 +155,17 @@ func TestSeal(t *testing.T) {
 	checkDirs(t, dirs, expected)
 }
 
-func checkDirs(t *testing.T, dirs []*dir, expected map[string]ExpectedDir) {
+func checkDirs(t *testing.T, dirs []Dir, expected map[string]ExpectedDir) {
 	for _, dir := range dirs {
-		e, ok := expected[dir.path]
+		e, ok := expected[dir.Path]
 		require.True(t, ok)
-		assert.Equal(t, e.Name, dir.seal.Name)
-		assert.Equal(t, e.TotalSize, dir.seal.TotalSize)
-		assert.Equal(t, e.SHA256, Base64(dir.seal.SHA256))
-		for _, file := range dir.seal.Files {
+		assert.Equal(t, e.Name, dir.Seal.Name)
+		assert.Equal(t, e.TotalSize, dir.Seal.TotalSize)
+		assert.Equal(t, e.SHA256, Base64(dir.Seal.SHA256))
+		for _, file := range dir.Seal.Files {
 			findFile(t, file, e.Files)
 		}
-		assert.Equal(t, len(e.Files), len(dir.seal.Files))
+		assert.Equal(t, len(e.Files), len(dir.Seal.Files))
 		e.AllFoundOnce(t)
 		e.ResetFound()
 	}

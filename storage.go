@@ -49,16 +49,16 @@ type StoredSeal struct {
 	File *FileSeal
 }
 
-func (i *Index) AddDir(dir *dir, basePath string) error {
-	path, err := filepath.Rel(basePath, dir.path)
+func (i *Index) AddDir(dir *Dir, basePath string) error {
+	path, err := filepath.Rel(basePath, dir.Path)
 	if err != nil {
 		return errors.Wrap(err, "filepath.Rel")
 	}
 	toStore := []*StoredSeal{{
 		Path: path,
-		Dir:  dir.seal,
+		Dir:  dir.Seal,
 	}}
-	for _, file := range dir.seal.Files {
+	for _, file := range dir.Seal.Files {
 		if file.IsDir {
 			continue
 		}
@@ -97,7 +97,7 @@ func (i *Index) AddDir(dir *dir, basePath string) error {
 
 var PrintDirsToIndex = true
 
-func DirsToIndex(indexPath string, dirs []*dir, basePath string) error {
+func DirsToIndex(indexPath string, dirs []Dir, basePath string) error {
 	index, err := Open(indexPath)
 	if err != nil {
 		return errors.Wrap(err, "Open")
@@ -111,14 +111,14 @@ func DirsToIndex(indexPath string, dirs []*dir, basePath string) error {
 	}
 
 	for i, dir := range dirs {
-		err = index.AddDir(dir, basePath)
+		err = index.AddDir(&dir, basePath)
 		if err != nil {
 			return errors.Wrap(err, "AddDir")
 		}
 		if PrintDirsToIndex {
 			select {
 			case <-tick.C:
-				log.Printf("added %.1f%% to index %q", float64(i)/float64(len(dirs))*100, dir.path)
+				log.Printf("added %.1f%% to index %q", float64(i)/float64(len(dirs))*100, dir.Path)
 			default:
 			}
 		}

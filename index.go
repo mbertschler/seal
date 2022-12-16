@@ -14,13 +14,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type dir struct {
-	path  string
-	depth int
+type Dir struct {
+	Path  string
+	Depth int
 
-	seal  *DirSeal
-	quick *Diff
-	hash  *Diff
+	Seal *DirSeal
+
+	QuickDiff *Diff
+	HashDiff  *Diff
 }
 
 var (
@@ -42,7 +43,7 @@ func IndexPath(path, indexFile string) error {
 
 // indexDirectories returns all subdirectories with info about their depth.
 // The deepest nested directories are sorted first.
-func indexDirectories(dirPath string, loadSeals bool) ([]*dir, error) {
+func indexDirectories(dirPath string, loadSeals bool) ([]Dir, error) {
 	info, err := os.Lstat(dirPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "Lstat")
@@ -62,7 +63,7 @@ func indexDirectories(dirPath string, loadSeals bool) ([]*dir, error) {
 	}
 
 	skipped := 0
-	out := []*dir{}
+	out := []Dir{}
 	err = filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			log.Println(color.YellowString("can't index %q: %v", path, err))
@@ -82,7 +83,7 @@ func indexDirectories(dirPath string, loadSeals bool) ([]*dir, error) {
 
 			path = filepath.Clean(path)
 			parts := strings.Split(path, "/")
-			out = append(out, &dir{path: path, depth: len(parts), seal: seal})
+			out = append(out, Dir{Path: path, Depth: len(parts), Seal: seal})
 
 			if PrintIndexProgress {
 				select {
@@ -104,7 +105,7 @@ func indexDirectories(dirPath string, loadSeals bool) ([]*dir, error) {
 
 	// deepest directories first, because we the seals for above directories
 	sort.Slice(out, func(i, j int) bool {
-		return out[i].depth > out[j].depth
+		return out[i].Depth > out[j].Depth
 	})
 	return out, nil
 }
