@@ -2,7 +2,6 @@ package seal
 
 import (
 	"encoding/json"
-	"log"
 	"path/filepath"
 	"time"
 
@@ -10,19 +9,12 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-type StorageType string
-
 const IndexBoltDB StorageType = "boltdb"
 
 var (
 	pathsBucket  = []byte("paths")
 	hashesBucket = []byte("hashes")
 )
-
-type IndexStorage interface {
-	AddDir(dir *Dir, basePath string) error
-	Close() error
-}
 
 type BoltIndex struct {
 	db *bbolt.DB
@@ -107,40 +99,3 @@ func (i *BoltIndex) AddDir(dir *Dir, basePath string) error {
 }
 
 var putOps int
-
-var PrintDirsToIndex = true
-
-func DirsToIndex(indexPath string, dirs []Dir, basePath string, t StorageType) error {
-	var storage IndexStorage
-	var err error
-	switch t {
-	case IndexBoltDB:
-		storage, err = OpenBoltDB(indexPath)
-		if err != nil {
-			return errors.Wrap(err, "Open")
-		}
-	}
-
-	defer storage.Close()
-
-	var tick *time.Ticker
-	if PrintIndexProgress {
-		tick = time.NewTicker(IndexProgressInterval)
-		defer tick.Stop()
-	}
-
-	for i, dir := range dirs {
-		err := storage.AddDir(&dir, basePath)
-		if err != nil {
-			return errors.Wrap(err, "AddDir")
-		}
-		if PrintIndexProgress {
-			select {
-			case <-tick.C:
-				log.Printf("added %.1f%% to index %q", float64(i)/float64(len(dirs))*100, dir.Path)
-			default:
-			}
-		}
-	}
-	return nil
-}

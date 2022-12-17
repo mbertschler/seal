@@ -14,7 +14,7 @@ const (
 
 func IndexBench() error {
 	start := time.Now()
-	dirs := generateDirs(1e3)
+	dirs := generateDirs(10e3)
 	log.Println("generated", len(dirs), "directories with seals in", time.Since(start))
 
 	// buf, err := json.Marshal(dirs)
@@ -24,9 +24,9 @@ func IndexBench() error {
 	// fmt.Println(string(buf))
 
 	start = time.Now()
-	indexFile := "./benchindex.out"
+	indexFile := "./benchindex_bolt.out"
 	err := os.Remove(indexFile)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
@@ -34,7 +34,24 @@ func IndexBench() error {
 	err = DirsToIndex(indexFile, dirs, path, IndexBoltDB)
 	took := time.Since(start)
 	log.Println("indexed", len(dirs), "directories with seals in", took, "with", putOps, "writes")
-	log.Printf("%v average write time", time.Duration(float64(took)/float64(putOps)))
+	log.Printf("BoltDB %v average write time", time.Duration(float64(took)/float64(putOps)))
+	if err != nil {
+		return err
+	}
+
+	putOps = 0
+
+	start = time.Now()
+	indexFile = "./benchindex_sqlite.out"
+	err = os.Remove(indexFile)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	err = DirsToIndex(indexFile, dirs, path, IndexSQLite)
+	took = time.Since(start)
+	log.Println("indexed", len(dirs), "directories with seals in", took, "with", putOps, "writes")
+	log.Printf("SQLite %v average write time", time.Duration(float64(took)/float64(putOps)))
 	if err != nil {
 		return err
 	}

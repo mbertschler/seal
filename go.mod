@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/fatih/color v1.13.0
+	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
