@@ -31,12 +31,12 @@ var (
 
 // SealPath calculates seals for the given path and all subdirectories
 // and writes them into a seal JSON file per directory.
-func SealPath(dirPath string) ([]Dir, error) {
+func SealPath(dirPath string, prefixes []string) ([]Dir, error) {
 	if PrintSealing {
 		log.Println("indexing", dirPath)
 	}
 	loadSeals := false
-	dirs, err := indexDirectories(dirPath, loadSeals)
+	dirs, err := indexDirectories(dirPath, loadSeals, prefixes)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexDirectories")
 	}

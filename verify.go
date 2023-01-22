@@ -15,12 +15,12 @@ var (
 
 // VerifyPath checks all files and directories against the
 // seal JSON files by comparing metadata and hashing file contents.
-func VerifyPath(dirPath string, printDifferences bool) ([]Dir, error) {
+func VerifyPath(dirPath string, printDifferences bool, prefixes []string) ([]Dir, error) {
 	if PrintVerify {
 		log.Println("indexing", dirPath)
 	}
 	loadSeals := false
-	dirs, err := indexDirectories(dirPath, loadSeals)
+	dirs, err := indexDirectories(dirPath, loadSeals, prefixes)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexDirectories")
 	}

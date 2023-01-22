@@ -27,9 +27,9 @@ func OpenSqlite(indexPath string) (*SqliteIndex, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "create table")
 	}
-	_, err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS seal_path ON seals(path)")
+	_, err = db.Exec("CREATE INDEX IF NOT EXISTS seal_path ON seals(path)")
 	if err != nil {
-		return nil, errors.Wrap(err, "create index")
+		return nil, errors.Wrap(err, "create path index")
 	}
 
 	return &SqliteIndex{db: db}, errors.Wrap(err, "setup db")
@@ -48,6 +48,7 @@ func (i *SqliteIndex) AddDir(dir *Dir, basePath string) error {
 		Path: path,
 		Dir:  dir.Seal,
 	}}
+
 	for _, file := range dir.Seal.Files {
 		if file.IsDir {
 			continue
@@ -57,6 +58,12 @@ func (i *SqliteIndex) AddDir(dir *Dir, basePath string) error {
 			File: file,
 		})
 	}
+
+	tx, err := i.db.Begin()
+	if err != nil {
+		return errors.Wrap(err, "db.BeginTx")
+	}
+	defer tx.Rollback()
 
 	for _, s := range toStore {
 		var hash []byte
@@ -72,12 +79,18 @@ func (i *SqliteIndex) AddDir(dir *Dir, basePath string) error {
 
 		hashString := base64.RawStdEncoding.EncodeToString(hash)
 
-		const insert = `INSERT INTO seals (hash, path, json) VALUES ($1, $2, $3);`
-		_, err = i.db.Exec(insert, hashString, s.Path, buf)
+		const insert = `INSERT INTO seals (hash, path, json) VALUES ($1, $2, $3)
+		ON CONFLICT (hash) DO UPDATE SET path = $2, json = $3;`
+		_, err = tx.Exec(insert, hashString, s.Path, buf)
 		if err != nil {
 			return errors.Wrap(err, "insert")
 		}
 		putOps++
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return errors.Wrap(err, "tx.Commit")
 	}
 
 	return nil
