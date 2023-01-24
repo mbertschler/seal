@@ -98,4 +98,8 @@ func (i *BoltIndex) AddDir(dir *Dir, basePath string) error {
 	})
 }
 
+func (i *BoltIndex) LoadAfterHash(hash []byte, count int) ([]StoredSeal, error) {
+	return nil, errors.New("not implemented")
+}
+
 var putOps int

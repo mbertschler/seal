@@ -5,6 +5,9 @@ import (
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -12,16 +15,40 @@ const (
 	dirsPerDir  = 5
 )
 
-func IndexBench() error {
+func indexBenchCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "indexbench",
+		Short: "indexing benchmarks",
+	}
+
+	writeCmd := &cobra.Command{
+		Use:   "write",
+		Short: "index write benchmark",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return IndexBenchWrite()
+		},
+	}
+	cmd.AddCommand(writeCmd)
+
+	readCmd := &cobra.Command{
+		Use:   "read",
+		Short: "index read benchmark",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return errors.New("need a path argument to read index")
+			}
+			return IndexBenchRead(args[0])
+		},
+	}
+	cmd.AddCommand(readCmd)
+
+	return cmd
+}
+
+func IndexBenchWrite() error {
 	start := time.Now()
 	dirs := generateDirs(10e3)
 	log.Println("generated", len(dirs), "directories with seals in", time.Since(start))
-
-	// buf, err := json.Marshal(dirs)
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Println(string(buf))
 
 	start = time.Now()
 	indexFile := "./benchindex_bolt.out"
@@ -143,4 +170,16 @@ func (g *dirGenerator) nextDir() {
 
 	g.current = &g.output[len(g.output)-1]
 	g.toFill = append(g.toFill, g.current)
+}
+
+func IndexBenchRead(path string) error {
+	log.Println("loading", path, "index")
+	PrintIndexProgress = true
+	start := time.Now()
+	index, err := LoadIndex(path, IndexSQLite)
+	if err != nil {
+		return errors.Wrap(err, "LoadIndex")
+	}
+	log.Println("loading", len(index.ByHash), "hashes took", time.Since(start))
+	return nil
 }

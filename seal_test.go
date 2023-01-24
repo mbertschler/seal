@@ -105,11 +105,11 @@ func randomFile(t testing.TB, path string, seed int64) {
 func TestSeal(t *testing.T) {
 	expected := SetupTestDir(t)
 
-	dirs, err := SealPath(TestDir)
+	dirs, err := SealPath(TestDir, nil)
 	require.NoError(t, err)
 	checkDirs(t, dirs, expected)
 
-	dirs, err = SealPath(TestDir)
+	dirs, err = SealPath(TestDir, nil)
 	require.NoError(t, err)
 	checkDirs(t, dirs, expected)
 
@@ -146,11 +146,11 @@ func TestSeal(t *testing.T) {
 	d.Files[1].Deleted = true
 	expected["testdir/sub"] = d
 
-	dirs, err = SealPath(TestDir)
+	dirs, err = SealPath(TestDir, nil)
 	require.NoError(t, err)
 	checkDirs(t, dirs, expected)
 
-	dirs, err = SealPath(TestDir)
+	dirs, err = SealPath(TestDir, nil)
 	require.NoError(t, err)
 	checkDirs(t, dirs, expected)
 }

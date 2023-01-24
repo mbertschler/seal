@@ -12,11 +12,11 @@ import (
 func TestVerify(t *testing.T) {
 	expected := SetupTestDir(t)
 
-	dirs, err := SealPath(TestDir)
+	dirs, err := SealPath(TestDir, nil)
 	require.NoError(t, err)
 	checkDirs(t, dirs, expected)
 
-	dirs, err = VerifyPath(TestDir, false)
+	dirs, err = VerifyPath(TestDir, false, nil)
 	require.NoError(t, err)
 
 	for _, dir := range dirs {
@@ -28,7 +28,7 @@ func TestVerify(t *testing.T) {
 	randomFile(t, TestDir+"/b.txt", 5) // new file
 	assert.NoError(t, os.Remove(TestDir+"/sub/d.txt"))
 
-	dirs, err = VerifyPath(TestDir, false)
+	dirs, err = VerifyPath(TestDir, false, nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, 0, len(dirs[0].QuickDiff.FilesAdded))

@@ -95,3 +95,29 @@ func (i *SqliteIndex) AddDir(dir *Dir, basePath string) error {
 
 	return nil
 }
+
+func (i *SqliteIndex) LoadAfterHash(hash []byte, count int) ([]StoredSeal, error) {
+	hashString := base64.RawStdEncoding.EncodeToString(hash)
+	rows, err := i.db.Query(`SELECT json FROM seals
+	WHERE hash > $1 ORDER BY hash ASC LIMIT $2;`, hashString, count)
+	if err != nil {
+		return nil, errors.Wrap(err, "db.Query")
+	}
+	defer rows.Close()
+
+	out := []StoredSeal{}
+	for rows.Next() {
+		var buf []byte
+		err = rows.Scan(&buf)
+		if err != nil {
+			return nil, errors.Wrap(err, "rows.Scan")
+		}
+		var s StoredSeal
+		err = json.Unmarshal(buf, &s)
+		if err != nil {
+			return nil, errors.Wrap(err, "json.Unmarshal")
+		}
+		out = append(out, s)
+	}
+	return out, nil
+}
