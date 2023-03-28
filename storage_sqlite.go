@@ -11,7 +11,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const IndexSQLite StorageType = "sqlite"
+const StorageTypeSQLite StorageType = "sqlite"
 
 type SqliteIndex struct {
 	db *sql.DB

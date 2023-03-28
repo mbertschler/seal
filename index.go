@@ -39,7 +39,7 @@ func IndexPath(path, indexFile string, prefixes []string) error {
 	log.Println("loaded", len(dirs), "directories with seals in", time.Since(start))
 
 	start = time.Now()
-	err = DirsToIndex(indexFile, dirs, path, IndexSQLite)
+	err = DirsToIndex(indexFile, dirs, path, StorageTypeSQLite)
 	if err != nil {
 		return errors.Wrap(err, "DirsToIndex")
 	}

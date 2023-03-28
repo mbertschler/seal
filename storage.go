@@ -21,12 +21,15 @@ type IndexStorage interface {
 
 func openStorage(t StorageType, path string) (IndexStorage, error) {
 	switch t {
-	case IndexBoltDB:
+	case StorageTypeBoltDB:
 		storage, err := OpenBoltDB(path)
 		return storage, errors.Wrap(err, "OpenBoltDB")
-	case IndexSQLite:
+	case StorageTypeSQLite:
 		storage, err := OpenSqlite(path)
 		return storage, errors.Wrap(err, "OpenSqlite")
+	case StorageTypePebble:
+		storage, err := OpenPebble(path)
+		return storage, errors.Wrap(err, "OpenPebble")
 	default:
 		return nil, errors.Errorf("unknown storage type %q", t)
 	}
@@ -56,6 +59,13 @@ func DirsToIndex(indexPath string, dirs []Dir, basePath string, t StorageType) e
 				log.Printf("added %.1f%% to index %q", float64(i)/float64(len(dirs))*100, dir.Path)
 			default:
 			}
+		}
+	}
+	flusher, ok := storage.(interface{ Flush() error })
+	if ok {
+		err := flusher.Flush()
+		if err != nil {
+			return errors.Wrap(err, "Flush")
 		}
 	}
 	return nil
@@ -98,6 +108,7 @@ func LoadIndex(indexPath string, t StorageType) (*LoadedIndex, error) {
 		}
 
 		for _, s := range stored {
+			sCopy := s
 			if s.Dir != nil && s.File != nil {
 				return nil, errors.Errorf("both dir and file set for %q", s.Path)
 			}
@@ -107,12 +118,12 @@ func LoadIndex(indexPath string, t StorageType) (*LoadedIndex, error) {
 					//Depth?
 					Seal: s.Dir,
 				})
-				out.ByHash[string(s.Dir.SHA256)] = &s
-				out.ByPath[string(s.Path)] = &s
+				out.ByHash[string(s.Dir.SHA256)] = &sCopy
+				out.ByPath[string(s.Path)] = &sCopy
 				lastHash = s.Dir.SHA256
 			} else if s.File != nil {
-				out.ByHash[string(s.File.SHA256)] = &s
-				out.ByPath[string(s.Path)] = &s
+				out.ByHash[string(s.File.SHA256)] = &sCopy
+				out.ByPath[string(s.Path)] = &sCopy
 				lastHash = s.File.SHA256
 			} else {
 				return nil, errors.Errorf("neither dir or file are set for %q", s.Path)

@@ -34,10 +34,11 @@ func indexBenchCmd() *cobra.Command {
 		Use:   "read",
 		Short: "index read benchmark",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return errors.New("need a path argument to read index")
-			}
-			return IndexBenchRead(args[0])
+			return IndexBenchRead()
+			// if len(args) == 0 {
+			// 	return errors.New("need a path argument to read index")
+			// }
+			// return IndexBenchRead(args[0])
 		},
 	}
 	cmd.AddCommand(readCmd)
@@ -45,23 +46,46 @@ func indexBenchCmd() *cobra.Command {
 	return cmd
 }
 
+const (
+	benchIndexBolt   = "./benchindex_bolt.out"
+	benchIndexSqlite = "./benchindex_sqlite.out"
+	benchIndexPebble = "./benchindex_pebble.out"
+)
+
 func IndexBenchWrite() error {
 	start := time.Now()
-	dirs := generateDirs(10e3)
+	dirs := generateDirs(100e3)
 	log.Println("generated", len(dirs), "directories with seals in", time.Since(start))
 
 	start = time.Now()
-	indexFile := "./benchindex_bolt.out"
+	indexFile := benchIndexBolt
 	err := os.Remove(indexFile)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
 	path := "basedir"
-	err = DirsToIndex(indexFile, dirs, path, IndexBoltDB)
+	// err = DirsToIndex(indexFile, dirs, path, StorageTypeBoltDB)
 	took := time.Since(start)
+	// log.Println("indexed", len(dirs), "directories with seals in", took, "with", putOps, "writes")
+	// log.Printf("BoltDB %v average write time", time.Duration(float64(took)/float64(putOps)))
+	// if err != nil {
+	// 	return err
+	// }
+
+	putOps = 0
+
+	start = time.Now()
+	indexFile = benchIndexSqlite
+	err = os.Remove(indexFile)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	err = DirsToIndex(indexFile, dirs, path, StorageTypeSQLite)
+	took = time.Since(start)
 	log.Println("indexed", len(dirs), "directories with seals in", took, "with", putOps, "writes")
-	log.Printf("BoltDB %v average write time", time.Duration(float64(took)/float64(putOps)))
+	log.Printf("SQLite %v average write time", time.Duration(float64(took)/float64(putOps)))
 	if err != nil {
 		return err
 	}
@@ -69,16 +93,16 @@ func IndexBenchWrite() error {
 	putOps = 0
 
 	start = time.Now()
-	indexFile = "./benchindex_sqlite.out"
-	err = os.Remove(indexFile)
+	indexFile = benchIndexPebble
+	err = os.RemoveAll(indexFile)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
-	err = DirsToIndex(indexFile, dirs, path, IndexSQLite)
+	err = DirsToIndex(indexFile, dirs, path, StorageTypePebble)
 	took = time.Since(start)
 	log.Println("indexed", len(dirs), "directories with seals in", took, "with", putOps, "writes")
-	log.Printf("SQLite %v average write time", time.Duration(float64(took)/float64(putOps)))
+	log.Printf("Pebble %v average write time", time.Duration(float64(took)/float64(putOps)))
 	if err != nil {
 		return err
 	}
@@ -172,14 +196,28 @@ func (g *dirGenerator) nextDir() {
 	g.toFill = append(g.toFill, g.current)
 }
 
-func IndexBenchRead(path string) error {
-	log.Println("loading", path, "index")
+func IndexBenchRead() error {
+	path := benchIndexSqlite
+	log.Println("loading", path, "index as SQLite")
 	PrintIndexProgress = true
 	start := time.Now()
-	index, err := LoadIndex(path, IndexSQLite)
+	index, err := LoadIndex(path, StorageTypeSQLite)
 	if err != nil {
-		return errors.Wrap(err, "LoadIndex")
+		return errors.Wrap(err, "LoadIndex SQLite")
 	}
-	log.Println("loading", len(index.ByHash), "hashes took", time.Since(start))
+	took := time.Since(start)
+	log.Println("loading", len(index.ByHash), "hashes from SQLite took", took)
+
+	path = benchIndexPebble
+	log.Println("loading", path, "index as Pebble")
+	PrintIndexProgress = true
+	start = time.Now()
+	index, err = LoadIndex(path, StorageTypePebble)
+	if err != nil {
+		return errors.Wrap(err, "LoadIndex Pebble")
+	}
+	took = time.Since(start)
+	log.Println("loading", len(index.ByHash), "hashes from Pebble took", took)
+
 	return nil
 }

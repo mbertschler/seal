@@ -9,7 +9,7 @@ import (
 	"go.etcd.io/bbolt"
 )
 
-const IndexBoltDB StorageType = "boltdb"
+const StorageTypeBoltDB StorageType = "boltdb"
 
 var (
 	pathsBucket  = []byte("paths")
