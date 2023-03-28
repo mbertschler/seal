@@ -64,6 +64,7 @@ func RootCmd() *cobra.Command {
 	cmd.AddCommand(verifyCmd)
 	cmd.AddCommand(indexCmd)
 	cmd.AddCommand(indexBenchCmd())
+	cmd.AddCommand(compareCmd())
 
 	cmd.PersistentFlags().StringVarP(&beforeFlag, "before", "b", "", "ignore directories sealed after this time")
 	cmd.PersistentFlags().DurationVarP(&PrintInterval, "interval", "i", time.Minute, "interval at which progress is reported")
